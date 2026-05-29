@@ -6,6 +6,7 @@ namespace QuoteQuiz.Api.Data.Models
         public Guid QuizGameId { get; set; }
         public Guid QuoteId { get; set; }
         public string SelectedAnswer { get; set; } = string.Empty;
+        public string SuggestedOptions { get; set; } = string.Empty;
         public bool IsCorrect { get; set; }
         public DateTime AnsweredAt { get; set; }
 

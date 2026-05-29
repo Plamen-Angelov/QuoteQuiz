@@ -77,6 +77,11 @@ namespace QuoteQuiz.Api.Data
                 .IsRequired()
                 .HasMaxLength(200);
 
+            modelBuilder.Entity<QuizAnswer>()
+                .Property(qa => qa.SuggestedOptions)
+                .HasMaxLength(500)
+                .HasDefaultValue(string.Empty);
+
             // Seed initial data
             SeedData(modelBuilder);
         }
