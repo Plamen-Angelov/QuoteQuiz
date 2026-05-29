@@ -51,6 +51,9 @@ namespace QuoteQuiz.Api.Controllers
                 if (saveGameDto == null || saveGameDto.UserId == Guid.Empty)
                     return BadRequest("UserId is required.");
 
+                if (saveGameDto.Answers == null || saveGameDto.Answers.Count == 0)
+                    return BadRequest("At least one answer is required.");
+
                 var result = await _gameService.SaveGameAsync(saveGameDto);
                 return Ok(result);
             }

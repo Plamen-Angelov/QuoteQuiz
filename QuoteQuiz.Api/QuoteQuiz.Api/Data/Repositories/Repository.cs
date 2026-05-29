@@ -25,17 +25,6 @@ namespace QuoteQuiz.Api.Data.Repositories
             return await _dbSet.ToListAsync();
         }
 
-        public virtual async Task<IEnumerable<T>> GetPagedAsync(int pageNumber, int pageSize)
-        {
-            if (pageNumber < 1) pageNumber = 1;
-            if (pageSize < 1) pageSize = 10;
-
-            return await _dbSet
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-        }
-
         public virtual async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate)
         {
             return await _dbSet.Where(predicate).ToListAsync();
@@ -44,6 +33,12 @@ namespace QuoteQuiz.Api.Data.Repositories
         public virtual async Task AddAsync(T entity)
         {
             await _dbSet.AddAsync(entity);
+            await SaveChangesAsync();
+        }
+
+        public virtual async Task AddRangeAsync(IEnumerable<T> entities)
+        {
+            await _dbSet.AddRangeAsync(entities);
             await SaveChangesAsync();
         }
 

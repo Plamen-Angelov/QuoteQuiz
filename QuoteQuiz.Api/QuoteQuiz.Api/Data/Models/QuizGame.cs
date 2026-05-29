@@ -6,7 +6,6 @@ namespace QuoteQuiz.Api.Data.Models
         public Guid UserId { get; set; }
         public DateTime StartedAt { get; set; }
         public DateTime? EndedAt { get; set; }
-        public int Score { get; set; } = 0;
 
         // Foreign key and navigation properties
         public User? User { get; set; }

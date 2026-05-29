@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using QuoteQuiz.Api.Data;
 
@@ -11,9 +12,11 @@ using QuoteQuiz.Api.Data;
 namespace QuoteQuiz.Api.Migrations
 {
     [DbContext(typeof(QuoteQuizDbContext))]
-    partial class QuoteQuizDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260529190727_RemoveQuizGameScore")]
+    partial class RemoveQuizGameScore
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

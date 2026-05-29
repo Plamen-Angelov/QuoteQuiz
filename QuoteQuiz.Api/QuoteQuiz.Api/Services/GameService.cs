@@ -8,14 +8,13 @@ namespace QuoteQuiz.Api.Services
     {
         private readonly IQuoteRepository _quoteRepository;
         private readonly IUserRepository _userRepository;
-        private readonly IRepository<QuizGame> _gameRepository;
+        private readonly IGameRepository _gameRepository;
         private readonly IRepository<QuizAnswer> _answerRepository;
 
         public GameService(
             IQuoteRepository quoteRepository,
-
             IUserRepository userRepository,
-            IRepository<QuizGame> gameRepository,
+            IGameRepository gameRepository,
             IRepository<QuizAnswer> answerRepository)
         {
             _quoteRepository = quoteRepository;
@@ -41,6 +40,9 @@ namespace QuoteQuiz.Api.Services
                 .OrderBy(_ => random.Next())
                 .Take(2)
                 .ToList();
+
+            if (otherAuthors.Count < 2)
+                throw new InvalidOperationException("Not enough distinct authors to generate a quiz question.");
 
             otherAuthors.Add(randomQuote.Author);
             otherAuthors = otherAuthors.OrderBy(_ => random.Next()).ToList();
@@ -68,38 +70,31 @@ namespace QuoteQuiz.Api.Services
                 Id = Guid.NewGuid(),
                 UserId = saveGameDto.UserId,
                 StartedAt = DateTime.UtcNow,
-                EndedAt = DateTime.UtcNow,
-                Score = 0
+                EndedAt = DateTime.UtcNow
             };
 
             await _gameRepository.AddAsync(game);
 
-            // Save answers
-            foreach (var answer in saveGameDto.Answers)
-            {
-                var quote = await _quoteRepository.GetByIdAsync(answer.QuoteId);
-                if (quote == null)
-                    continue;
+            // Fetch all referenced quotes in one query
+            var quoteIds = saveGameDto.Answers.Select(a => a.QuoteId).ToList();
+            var quotes = await _quoteRepository.FindAsync(q => quoteIds.Contains(q.Id));
+            var quoteDict = quotes.ToDictionary(q => q.Id);
 
-                var quizAnswer = new QuizAnswer
+            var quizAnswers = saveGameDto.Answers
+                .Where(a => quoteDict.ContainsKey(a.QuoteId))
+                .Select(a => new QuizAnswer
                 {
                     Id = Guid.NewGuid(),
                     QuizGameId = game.Id,
-                    QuoteId = answer.QuoteId,
-                    SelectedAnswer = answer.SelectedAnswer,
-                    SuggestedOptions = answer.SuggestedOptions,
-                    IsCorrect = answer.IsCorrect,
+                    QuoteId = a.QuoteId,
+                    SelectedAnswer = a.SelectedAnswer,
+                    SuggestedOptions = a.SuggestedOptions,
+                    IsCorrect = a.IsCorrect,
                     AnsweredAt = DateTime.UtcNow
-                };
+                })
+                .ToList();
 
-                await _answerRepository.AddAsync(quizAnswer);
-
-                if (answer.IsCorrect)
-                    game.Score++;
-            }
-
-            // Update game score
-            await _gameRepository.UpdateAsync(game);
+            await _answerRepository.AddRangeAsync(quizAnswers);
 
             return new SaveGameResponseDto { Id = game.Id };
         }
@@ -111,31 +106,24 @@ namespace QuoteQuiz.Api.Services
             if (user == null || user.IsDeleted)
                 throw new InvalidOperationException("User not found.");
 
-            var games = await _gameRepository.FindAsync(g => g.UserId == userId && g.EndedAt.HasValue);
+            var games = await _gameRepository.GetUserGamesWithDetailsAsync(userId);
             var gameList = new List<UserGameHistoryDto>();
 
-            foreach (var game in games.OrderByDescending(g => g.StartedAt))
+            foreach (var game in games)
             {
-                var answers = await _answerRepository.FindAsync(a => a.QuizGameId == game.Id);
-                var answerList = new List<GameQuestionAnswerDto>();
-
-                foreach (var answer in answers)
-                {
-                    var quote = await _quoteRepository.GetByIdAsync(answer.QuoteId);
-                    if (quote == null)
-                        continue;
-
-                    answerList.Add(new GameQuestionAnswerDto
+                var answerList = game.QuizAnswers
+                    .Where(a => a.Quote != null)
+                    .Select(a => new GameQuestionAnswerDto
                     {
-                        QuoteId = answer.QuoteId,
-                        QuoteText = quote.Text,
-                        Author = quote.Author,
-                        SelectedAnswer = answer.SelectedAnswer,
-                        SuggestedOptions = answer.SuggestedOptions,
-                        CorrectAnswer = quote.Author,
-                        IsCorrect = answer.IsCorrect
-                    });
-                }
+                        QuoteId = a.QuoteId,
+                        QuoteText = a.Quote!.Text,
+                        Author = a.Quote.Author,
+                        SelectedAnswer = a.SelectedAnswer,
+                        SuggestedOptions = a.SuggestedOptions,
+                        CorrectAnswer = a.Quote.Author,
+                        IsCorrect = a.IsCorrect
+                    })
+                    .ToList();
 
                 var totalQuestions = answerList.Count;
                 var correctAnswers = answerList.Count(a => a.IsCorrect);

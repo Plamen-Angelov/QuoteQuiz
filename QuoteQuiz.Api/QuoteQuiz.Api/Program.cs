@@ -19,6 +19,7 @@ builder.Services.AddDbContext<QuoteQuizDbContext>(options =>
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IQuoteRepository, QuoteRepository>();
+builder.Services.AddScoped<IGameRepository, GameRepository>();
 
 // Register Services
 builder.Services.AddScoped<IUserService, UserService>();
